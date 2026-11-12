@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>The Lost Cat: A Journey Home</title>
+<style>
+:root{--ink:#29334a;--cream:#fff8e9;--pink:#ff8eaa;--blue:#79d7ef}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#17243b;color:var(--ink)}
+body{display:grid;place-items:center;padding:12px;overflow-x:hidden}
+#gameShell{width:min(100%,1000px);position:relative;background:#a6e7ed;border:5px solid #fff4dc;border-radius:24px;overflow:hidden;box-shadow:0 18px 60px #07132788}
+#topbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:#fff8e9}
+.brand{font-weight:900;font-size:clamp(14px,2.5vw,20px);color:#42516e}.stats{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.pill{background:#eef6ff;border:2px solid #d9e9f5;border-radius:999px;padding:5px 10px;font-size:13px;font-weight:800;white-space:nowrap}
+#stage{position:relative;width:100%;aspect-ratio:16/9;min-height:250px;background:#91dce8}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:#17243b99;z-index:4}
+.panel{width:min(92%,540px);background:var(--cream);border:4px solid white;border-radius:24px;padding:clamp(18px,4vw,32px);text-align:center;box-shadow:0 12px 30px #17243b55}
+.panel h1{margin:0 0 8px;font-size:clamp(24px,4vw,40px);line-height:1.05;color:#405071}
+.panel p{margin:8px 0 18px;line-height:1.5;color:#56617a}
+button{border:0;border-radius:14px;padding:11px 17px;font:800 15px system-ui;cursor:pointer;color:#35415c;background:#ffe09a;box-shadow:0 4px 0 #d4ad62;touch-action:manipulation}
+button:active{transform:translateY(2px);box-shadow:0 2px 0 #d4ad62}
+button.primary{background:#ff8eaa;color:#fff;box-shadow:0 4px 0 #d26384;font-size:18px;padding:13px 28px}
+button.secondary{background:#c8f0e8;box-shadow:0 4px 0 #8bc7bc}
+#toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;background:#fff8e9}
+#toolbar .hint{font-size:12px;color:#6c7890}
+#mobileControls{display:none;justify-content:space-between;align-items:center;padding:10px 14px;background:#fff8e9;gap:10px}
+.pad{display:flex;gap:10px}.ctrl{width:58px;height:52px;font-size:22px;border-radius:16px;background:#d9f3f5;box-shadow:0 4px 0 #a1cbd0}
+.jump{width:76px;background:#ffb4c5;box-shadow:0 4px 0 #d77d94}
+#toast{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:#fff8e9;border:2px solid white;border-radius:999px;padding:7px 14px;font-weight:900;font-size:13px;z-index:3;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.show{opacity:1}
+.reunion-scene{height:118px;display:flex;align-items:center;justify-content:center;gap:10px;position:relative;overflow:hidden;background:linear-gradient(#bcecf3 0 62%,#9bd58b 62%);border:3px solid #fff;border-radius:18px;margin:0 auto 14px;max-width:360px}
+.reunion-owner{font-size:64px;z-index:1;animation:ownerHug 1.2s ease-in-out infinite alternate}
+.reunion-cat{font-size:54px;animation:catReturn 2s cubic-bezier(.2,.8,.2,1) infinite;z-index:2}
+.reunion-hearts{position:absolute;top:7px;right:18px;font-size:22px;animation:heartFloat 1.4s ease-in-out infinite}\n.reunion-dog{font-size:48px;position:absolute;left:12px;bottom:10px;animation:dogFlee 2.8s ease-in forwards;z-index:1}\n@keyframes dogFlee{0%{transform:translateX(0) scaleX(1);opacity:1}35%{transform:translateX(-25px) scaleX(1);opacity:1}100%{transform:translateX(-210px) scaleX(1);opacity:0}}
+@keyframes catReturn{0%{transform:translateX(-95px) scale(.8)}55%,100%{transform:translateX(0) scale(1.08)}}
+@keyframes ownerHug{from{transform:scale(1)}to{transform:scale(1.08) rotate(-4deg)}}
+@keyframes heartFloat{0%,100%{transform:translateY(5px);opacity:.65}50%{transform:translateY(-8px);opacity:1}}
+.small{font-size:12px!important;color:#71809a!important;margin-top:12px!important}
+@media(max-width:650px){body{padding:5px}#gameShell{border-width:3px;border-radius:16px}#stage{aspect-ratio:4/3;min-height:260px}#mobileControls{display:flex}#toolbar .hint{display:none}.pill{font-size:11px;padding:4px 7px}}
+</style>
+</head>
+<body>
+<div id="gameShell">
+  <div id="topbar">
+    <div class="brand">🐾 THE LOST CAT</div>
+    <div class="stats">
+      <div class="pill" id="levelLabel">Level 1 / 5</div>
+      <div class="pill" id="fishLabel">🐟 0</div>
+      <div class="pill" id="lifeLabel">❤️❤️❤️</div>
+    </div>
+  </div>
+  <div id="stage">
+    <canvas id="game" width="960" height="540" aria-label="Area permainan The Lost Cat"></canvas>
+    <div id="toast"></div>
+    <div class="overlay" id="menu">
+      <div class="panel">
+        <div style="font-size:54px">🐱 🏡</div>
+        <h1>The Lost Cat:<br>A Journey Home</h1>
+        <p>Bantu Miko menemukan jalan pulang! Lewati rintangan, kumpulkan ikan dan hati, lalu hadapi kejaran anjing besar di level terakhir.</p>
+        <button class="primary" id="playBtn">▶ PLAY</button>
+        <p class="small">Keyboard: ← → / A D untuk bergerak · Space / ↑ untuk melompat<br>HP: gunakan tombol arah dan lompat di bawah.</p>
+      </div>
+    </div>
+    <div class="overlay" id="pause" style="display:none">
+      <div class="panel"><div style="font-size:48px">⏸️</div><h1>Game Paused</h1><p>Miko istirahat sebentar.</p><button class="primary" id="resumeBtn">Lanjutkan</button></div>
+    </div>
+    <div class="overlay" id="gameover" style="display:none">
+      <div class="panel"><div style="font-size:48px">😿</div><h1>Game Over</h1><p>Miko belum berhasil pulang. Ayo coba lagi!</p><button class="primary" id="retryBtn">↻ Coba Lagi</button><button class="secondary" id="homeBtn" style="margin-left:8px">Menu</button></div>
+    </div>
+    <div class="overlay" id="ending" style="display:none">
+      <div class="panel">
+        <div id="hugScene" class="reunion-scene" aria-label="Miko berlari lalu dipeluk pemiliknya">
+          <span class="reunion-dog" aria-label="Anjing besar berlari pergi">🐕💨</span><span class="reunion-cat">🐈</span><span class="reunion-owner">🧑🏻‍🦰🤗</span><span class="reunion-hearts">💗 ❤️ 💗</span>
+        </div>
+        <h1 style="color:#e66c8c">HOME SWEET HOME! ❤️</h1>
+        <p style="font-size:17px;font-weight:700">Finally, you're home! Your best friend has been waiting for you.</p>
+        <p>Anjing besar yang mengejar Miko akhirnya berbalik dan berlari pergi. Miko pun berlari ke pelukan pemiliknya. Mereka akhirnya bersama lagi!</p>
+        <button class="primary" id="againBtn">Main Lagi</button>
+      </div>
+    </div>
+  </div>
+  <div id="toolbar">
+    <div class="hint">Tips: lompat melewati lubang, kendaraan, anjing, dan sungai. Kumpulkan ikan serta hati!</div>
+    <div style="display:flex;gap:8px"><button id="pauseBtn" class="secondary">Ⅱ Pause</button><button id="restartBtn">↻ Restart</button></div>
+  </div>
+  <div id="mobileControls">
+    <div class="pad"><button class="ctrl" id="leftBtn" aria-label="Kiri">◀</button><button class="ctrl" id="rightBtn" aria-label="Kanan">▶</button></div>
+    <button class="ctrl jump" id="jumpBtn">⬆ LOMPAT</button>
+  </div>
+</div>
+<script>
+(()=>{
+'use strict';
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const $=id=>document.getElementById(id);
+const W=960,H=540,groundY=435;
+const levels=[
+ {name:'Kota Ceria',theme:'city',length:3100,speed:3.2,obstacles:[['box',570],['pit',900],['car',1280],['box',1640],['pit',2020],['car',2440],['box',2750]],dogs:[],fish:[380,740,1080,1510,1900,2300,2680]},
+ {name:'Taman Bunga',theme:'park',length:3600,speed:3.55,obstacles:[['pit',650],['dog',1030],['box',1400],['pit',1760],['car',2200],['dog',2600],['box',3060]],fish:[350,820,1200,1580,2030,2450,2900,3330]},
+ {name:'Hutan Hijau',theme:'forest',length:4100,speed:3.9,obstacles:[['pit',600],['dog',980],['pit',1420],['box',1840],['dog',2240],['pit',2700],['car',3180],['box',3600]],fish:[340,780,1220,1640,2050,2460,2930,3380,3820]},
+ {name:'Jalan Pulang',theme:'home',length:4300,speed:4.2,obstacles:[['car',580],['pit',960],['dog',1320],['river',1740],['box',2240],['dog',2650],['pit',3100],['car',3540],['river',3880]],fish:[350,760,1160,1580,2040,2460,2900,3360,3740,4100]},
+ {name:'Kejaran Anjing Raksasa',theme:'home',length:5000,speed:4.5,obstacles:[['bigdog',-150],['pit',720],['box',1180],['river',1680],['pit',2240],['car',2780],['box',3320],['pit',3900],['river',4480]],fish:[420,900,1350,1900,2440,3000,3500,4100,4620]}
+];
+const MAX_LIVES=5;
+let state='menu',level=0,score=0,lives=3,camera=0,frame=0,world=[],fish=[],hearts=[],particles=[],keys={},touch={left:false,right:false},cat={},sound=true,audioCtx=null,lastTime=0;
+function resetLevel(){const d=levels[level];camera=0;frame=0;cat={x:95,y:groundY-54,w:54,h:48,vy:0,onGround:true,inv:0,run:0};world=d.obstacles.map(([type,x])=>({type,x,y:groundY,w:type==='bigdog'?142:type==='pit'?125:type==='river'?160:type==='car'?112:type==='dog'?60:62,h:type==='bigdog'?88:type==='car'?48:type==='dog'?42:55,hit:false,phase:Math.random()*6}));fish=d.fish.map(x=>({x,y:groundY-90-(x%3)*25,taken:false}));hearts=[520,1120,1780,2460,3150,3820].filter(x=>x<d.length-70).map((x,i)=>({x,y:groundY-125-(i%2)*28,taken:false,phase:i*1.7}));particles=[];updateHud();}
+function updateHud(){$('levelLabel').textContent=`Level ${level+1} / ${levels.length} · ${levels[level].name}`;$('fishLabel').textContent='🐟 '+score;$('lifeLabel').textContent='❤️'.repeat(lives)+'🖤'.repeat(MAX_LIVES-lives);}
+function beep(freq=500,dur=.08,type='sine'){if(!sound)return;try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();let o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(.06,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}catch(e){}}
+function toast(t){$('toast').textContent=t;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),1100);}
+function show(id){['menu','pause','gameover','ending'].forEach(x=>$(x).style.display=x===id?'flex':'none');}
+function start(){level=0;score=0;lives=3;resetLevel();state='playing';show('');beep(660);}
+function restart(){lives=3;score=0;level=0;resetLevel();state='playing';show('');}
+function pause(){if(state==='playing'){state='paused';show('pause');}else if(state==='paused'){state='playing';show('');lastTime=performance.now();}}
+function endGame(){state='gameover';show('gameover');beep(130,.4,'sawtooth');}
+function hurt(){if(cat.inv>0)return;lives--;cat.inv=100;cat.vy=-7;beep(180,.2,'square');updateHud();if(lives<=0)endGame();else toast('Aduh! Hati-hati, Miko!');}
+function nextLevel(){if(level<levels.length-1){level++;resetLevel();toast('Level '+(level+1)+': '+levels[level].name+'!');beep(760,.15);}else{state='ending';show('ending');beep(880,.3);}}
+function jump(){if(state==='playing'&&cat.onGround){cat.vy=-13.5;cat.onGround=false;beep(430,.07);}}
+function rectHit(a,b){return a.x+a.w>b.x&&a.x<b.x+b.w&&a.y+a.h>b.y&&a.y<b.y+b.h;}
+function update(dt){if(state!=='playing')return;frame+=dt;let d=levels[level],run=(keys.ArrowRight||keys.KeyD||touch.right)?1:0,back=(keys.ArrowLeft||keys.KeyA||touch.left)?1:0;let speed=d.speed;
+ if(run)cat.x+=speed*1.5*dt;if(back)cat.x-=speed*1.1*dt;cat.x=Math.max(camera+45,cat.x);cat.run+=dt*(run||back?0.22:0.06);
+ cat.vy+=.65*dt;cat.y+=cat.vy*dt;if(cat.y+cat.h>=groundY){cat.y=groundY-cat.h;cat.vy=0;cat.onGround=true;}
+ camera=Math.max(0,cat.x-250);if(cat.inv>0)cat.inv-=dt;
+ for(const f of fish){if(!f.taken&&Math.abs((f.x)-(cat.x+cat.w/2))<42&&Math.abs(f.y-(cat.y+cat.h/2))<55){f.taken=true;score+=10;beep(900,.08);updateHud();particles.push({x:f.x,y:f.y,life:30,text:'+10'});}}
+ for(const h of hearts){if(!h.taken&&Math.abs(h.x-(cat.x+cat.w/2))<43&&Math.abs((h.y+Math.sin(frame*.12+h.phase)*7)-(cat.y+cat.h/2))<58&&lives<MAX_LIVES){h.taken=true;lives=Math.min(MAX_LIVES,lives+1);beep(1040,.18);updateHud();particles.push({x:h.x,y:h.y,life:42,text:'+1 ❤️'});toast('Nyawa bertambah! +1 ❤️');}}
+ for(const o of world){if(o.hit)continue;if(o.type==='bigdog')o.x+=5.35*dt;let sx=o.x-camera;if(sx<-180||sx>W+180)continue;let r={x:o.x,y:o.type==='pit'||o.type==='river'?groundY-5:o.type==='bigdog'?groundY-82:o.type==='dog'?groundY-42:o.type==='car'?groundY-48:groundY-55,w:o.w,h:o.type==='pit'||o.type==='river'?14:o.h};
+   if(o.type==='pit'||o.type==='river'){if(cat.x+cat.w>o.x+8&&cat.x<o.x+o.w-8&&cat.y+cat.h>groundY-10){hurt();o.hit=true;}}
+   else if(rectHit(cat,r)){if(o.type==='dog'||o.type==='bigdog'){if(o.type==='bigdog'){hurt();o.x=cat.x-230;}else if(cat.vy<0&&cat.y+cat.h<r.y+20){o.hit=true;score+=15;updateHud();toast('Anjing terlewati!');}else hurt();}else if(o.type==='car'){hurt();o.hit=true;}else{if(cat.x<o.x)cat.x=o.x-cat.w-2;else cat.x=o.x+o.w+2;cat.vy=-4;}}
+ }
+ if(cat.x>camera+W*.64)camera=cat.x-W*.64;
+ if(cat.x>=d.length){nextLevel();}
+ for(let p of particles)p.life-=dt;particles=particles.filter(p=>p.life>0);
+}
+function rounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
+function drawBackground(){let theme=levels[level].theme;let sky=theme==='city'?'#9ce4f2':theme==='park'?'#a8e9d0':theme==='forest'?'#9edbb2':'#ffd9a5';ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+ // sun and clouds
+ ctx.fillStyle='#fff2a8';ctx.beginPath();ctx.arc(820,90,42,0,Math.PI*2);ctx.fill();
+ for(let i=0;i<5;i++){let x=((i*235-camera*.18)%(W+200)+W+200)%(W+200)-70,y=65+(i%3)*45;ctx.fillStyle='#ffffffb8';ctx.beginPath();ctx.arc(x,y,23,0,Math.PI*2);ctx.arc(x+24,y-9,29,0,Math.PI*2);ctx.arc(x+52,y,22,0,Math.PI*2);ctx.fill();}
+ if(theme==='city'||theme==='home'){for(let i=0;i<9;i++){let x=((i*155-camera*.32)%(W+170)+W+170)%(W+170)-80;let h=125+(i%4)*40;ctx.fillStyle=['#f4a6a6','#f5cf8e','#9cc6dc','#b4c7a6'][i%4];ctx.fillRect(x,groundY-h,115,h);for(let yy=groundY-h+18;yy<groundY-18;yy+=32)for(let xx=x+16;xx<x+100;xx+=34){ctx.fillStyle='#fff2bd';ctx.fillRect(xx,yy,15,19);}}}
+ else{for(let i=0;i<11;i++){let x=((i*110-camera*.25)%(W+150)+W+150)%(W+150)-50;ctx.fillStyle=theme==='forest'?'#468f68':'#56b98a';ctx.beginPath();ctx.arc(x,groundY-75-(i%3)*25,50,0,Math.PI*2);ctx.fill();ctx.fillStyle='#8b674d';ctx.fillRect(x-7,groundY-55,14,65);}}
+ // distant hills
+ ctx.fillStyle=theme==='forest'?'#74b88a':'#8ed19e';ctx.beginPath();ctx.moveTo(0,groundY);for(let x=0;x<=W;x+=80)ctx.quadraticCurveTo(x+40,groundY-80-(x%3)*4,x+80,groundY);ctx.fill();
+}
+function drawGround(){ctx.fillStyle='#7dc66d';ctx.fillRect(0,groundY,W,H-groundY);ctx.fillStyle='#58a958';ctx.fillRect(0,groundY,W,13);for(let x=0;x<W;x+=45){ctx.fillStyle='#a5db79';ctx.fillRect(x,groundY+24+(x%3)*8,18,5);}
+ for(let o of world){let x=o.x-camera;if(x<-200||x>W+200)continue;if(o.type==='pit'||o.type==='river'){ctx.fillStyle=o.type==='river'?'#45bde0':'#34435b';ctx.beginPath();ctx.ellipse(x+o.w/2,groundY+7,o.w/2,24,0,0,Math.PI*2);ctx.fill();if(o.type==='river'){ctx.strokeStyle='#d4f8ff';ctx.lineWidth=5;for(let k=0;k<3;k++){ctx.beginPath();ctx.moveTo(x+20+k*42,groundY+8);ctx.lineTo(x+45+k*42,groundY+8);ctx.stroke();}rounded(x+o.w*.34,groundY-16,o.w*.32,20,5,'#a9794f');}}
+ else if(o.type==='box'){rounded(x,groundY-55,62,55,8,'#c98a54');ctx.strokeStyle='#895a3d';ctx.lineWidth=5;ctx.strokeRect(x+7,groundY-48,48,41);ctx.beginPath();ctx.moveTo(x+8,groundY-47);ctx.lineTo(x+54,groundY-8);ctx.moveTo(x+54,groundY-47);ctx.lineTo(x+8,groundY-8);ctx.stroke();}
+ else if(o.type==='car'){rounded(x,groundY-48,112,40,12,'#e76d73');rounded(x+22,groundY-68,62,30,10,'#f2a4a1');ctx.fillStyle='#d9f6ff';ctx.fillRect(x+31,groundY-62,20,17);ctx.fillRect(x+56,groundY-62,20,17);ctx.fillStyle='#343c52';ctx.beginPath();ctx.arc(x+25,groundY-7,12,0,7);ctx.arc(x+88,groundY-7,12,0,7);ctx.fill();}
+ else if(o.type==='dog'||o.type==='bigdog'){let big=o.type==='bigdog',s=big?1.75:1,bob=Math.sin(frame*.18+o.phase)*3*s;ctx.save();ctx.translate(x,groundY);ctx.scale(s,s);ctx.fillStyle=big?'#79513f':'#a66d4c';ctx.beginPath();ctx.ellipse(30,-23+bob,29,18,0,0,7);ctx.fill();ctx.beginPath();ctx.arc(49,-40+bob,17,0,7);ctx.fill();ctx.fillStyle=big?'#563b35':'#68483e';ctx.beginPath();ctx.ellipse(42,-53+bob,8,13,-.4,0,7);ctx.fill();ctx.fillStyle='white';ctx.beginPath();ctx.arc(55,-43+bob,4,0,7);ctx.fill();ctx.fillStyle='#30384a';ctx.beginPath();ctx.arc(57,-43+bob,2,0,7);ctx.fill();if(big){ctx.fillStyle='#fff';ctx.font='bold 15px system-ui';ctx.fillText('WOOF!',-2,-91+bob);}ctx.restore();}
+ }}
+function drawCat(){let x=cat.x-camera,y=cat.y;if(cat.inv>0&&Math.floor(frame/5)%2===0)return;let bob=cat.onGround?Math.sin(cat.run)*2:0;
+ // tail
+ ctx.strokeStyle='#e99a55';ctx.lineWidth=9;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x+8,y+31+bob);ctx.quadraticCurveTo(x-22,y+12+bob,x-9,y+1+bob);ctx.stroke();
+ // body and head
+ ctx.fillStyle='#f4ad63';ctx.beginPath();ctx.ellipse(x+27,y+32+bob,25,17,0,0,7);ctx.fill();ctx.beginPath();ctx.arc(x+38,y+13+bob,19,0,7);ctx.fill();
+ // ears
+ ctx.fillStyle='#f4ad63';ctx.beginPath();ctx.moveTo(x+23,y+2+bob);ctx.lineTo(x+25,y-14+bob);ctx.lineTo(x+36,y+1+bob);ctx.fill();ctx.beginPath();ctx.moveTo(x+43,y+1+bob);ctx.lineTo(x+55,y-13+bob);ctx.lineTo(x+57,y+8+bob);ctx.fill();
+ ctx.fillStyle='#ef7e91';ctx.beginPath();ctx.moveTo(x+27,y-2+bob);ctx.lineTo(x+27,y-9+bob);ctx.lineTo(x+33,y-1+bob);ctx.fill();ctx.beginPath();ctx.moveTo(x+47,y+1+bob);ctx.lineTo(x+54,y-7+bob);ctx.lineTo(x+53,y+5+bob);ctx.fill();
+ // face
+ ctx.fillStyle='#28334a';ctx.beginPath();ctx.arc(x+32,y+13+bob,2.6,0,7);ctx.arc(x+47,y+13+bob,2.6,0,7);ctx.fill();ctx.fillStyle='#ed7891';ctx.beginPath();ctx.moveTo(x+37,y+19+bob);ctx.lineTo(x+43,y+19+bob);ctx.lineTo(x+40,y+23+bob);ctx.fill();
+ ctx.strokeStyle='#5b4a49';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x+40,y+23+bob);ctx.quadraticCurveTo(x+36,y+28+bob,x+33,y+24+bob);ctx.moveTo(x+40,y+23+bob);ctx.quadraticCurveTo(x+44,y+28+bob,x+47,y+24+bob);ctx.stroke();
+ ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+23,y+20+bob);ctx.lineTo(x+9,y+17+bob);ctx.moveTo(x+23,y+24+bob);ctx.lineTo(x+9,y+27+bob);ctx.moveTo(x+52,y+20+bob);ctx.lineTo(x+65,y+17+bob);ctx.moveTo(x+52,y+24+bob);ctx.lineTo(x+65,y+27+bob);ctx.stroke();
+ // paws
+ rounded(x+9,y+41+bob,13,8,4,'#fff0d4');rounded(x+34,y+42+bob,13,8,4,'#fff0d4');
+}
+function draw(){drawBackground();drawGround();for(let h of hearts){if(h.taken)continue;let hx=h.x-camera,hy=h.y+Math.sin(frame*.12+h.phase)*7;if(hx<-35||hx>W+35)continue;ctx.save();ctx.shadowColor='#ff5b82';ctx.shadowBlur=16;ctx.font='30px system-ui';ctx.textAlign='center';ctx.fillText('❤️',hx,hy+10);ctx.restore();}for(let f of fish){if(f.taken)continue;let x=f.x-camera;if(x<-30||x>W+30)continue;ctx.save();ctx.translate(x,f.y+Math.sin(frame*.12+f.x)*5);ctx.fillStyle='#ffbf55';ctx.beginPath();ctx.ellipse(0,0,13,8,0,0,7);ctx.fill();ctx.beginPath();ctx.moveTo(-11,0);ctx.lineTo(-22,-8);ctx.lineTo(-22,8);ctx.fill();ctx.fillStyle='#36415a';ctx.beginPath();ctx.arc(6,-2,1.7,0,7);ctx.fill();ctx.restore();}
+ drawCat();for(let p of particles){ctx.globalAlpha=Math.max(0,p.life/30);ctx.fillStyle='#fff';ctx.font='bold 22px system-ui';ctx.fillText(p.text,p.x-camera,p.y-p.life);ctx.globalAlpha=1;}
+ // progress
+ let prog=Math.min(1,cat.x/levels[level].length);rounded(18,18,180,12,8,'#ffffffa0');rounded(18,18,180*prog,12,8,'#ff8eaa');ctx.fillStyle='#405071';ctx.font='bold 13px system-ui';ctx.fillText('JALAN PULANG',18,48);
+}
+function loop(t){let dt=Math.min(2,(t-lastTime)/16.67||1);lastTime=t;if(state==='playing')update(dt);draw();requestAnimationFrame(loop);}
+function bindHold(id,key){let b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();touch[key]=true;b.setPointerCapture(e.pointerId)});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,e=>{touch[key]=false;}));}
+bindHold('leftBtn','left');bindHold('rightBtn','right');$('jumpBtn').addEventListener('pointerdown',e=>{e.preventDefault();jump();});
+window.addEventListener('keydown',e=>{keys[e.code]=true;if(['Space','ArrowUp','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if((e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')&&!e.repeat)jump();if(e.code==='Escape'||e.code==='KeyP')pause();});
+window.addEventListener('keyup',e=>keys[e.code]=false);
+$('playBtn').onclick=start;$('resumeBtn').onclick=pause;$('pauseBtn').onclick=pause;$('restartBtn').onclick=restart;$('retryBtn').onclick=restart;$('homeBtn').onclick=()=>{state='menu';show('menu');};$('againBtn').onclick=start;
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='playing')pause();});
+resetLevel();show('menu');requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
